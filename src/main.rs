@@ -50,7 +50,13 @@ fn exe3() {
 }
 
 fn exe4() {
-    let s = enum_exe::Student { name: String::from(""), age: 0 };
+    let mut s = enum_exe::Student {
+        name: String::from(""),
+        age: 0,
+    };
 
-    println!("{:?}", s)
+    s.age = 22;
+    s.name = String::from("maa");
+
+    println!("{:?}", s);
 }
