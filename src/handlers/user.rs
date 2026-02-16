@@ -15,8 +15,8 @@ fn validate_user_create(body: &UserCreate) -> AppResult<()> {
     if name.len() > 50 {
         return Err(AppError::Validation("name must be at most 50 characters".into()));
     }
-    if body.age < 0 || body.age > 150 {
-        return Err(AppError::Validation("age must be between 0 and 150".into()));
+    if body.age <= 0 {
+        return Err(AppError::Validation("age must be greater than 0".into()));
     }
     Ok(())
 }
@@ -86,8 +86,8 @@ pub async fn update_user(
         }
     }
     if let Some(age) = body.age {
-        if age < 0 || age > 150 {
-            return Err(AppError::Validation("age must be between 0 and 150".into()));
+        if age <= 0 {
+            return Err(AppError::Validation("age must be greater than 0".into()));
         }
     }
     let existing = sqlx::query_as::<_, User>("SELECT id, name, age, ctime, utime FROM users WHERE id = ?")
