@@ -3,7 +3,7 @@
 use actix_web::{middleware, web, App, HttpServer};
 use tracing_subscriber::EnvFilter;
 
-use testr::{configure, create_pool, run_migrations, Config};
+use testr::{configure, create_pool, run_migrations, Config, SolanaClientState};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -27,10 +27,26 @@ async fn main() -> std::io::Result<()> {
 
     let bind = config.bind;
     let pool = web::Data::new(pool);
+    let solana_state = match SolanaClientState::from_config(&config.solana) {
+        Ok(s) => {
+            if s.client().is_some() {
+                tracing::info!("Solana RPC enabled");
+            }
+            web::Data::new(s)
+        }
+        Err(e) => {
+            tracing::error!("Solana client init failed: {}", e);
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Solana config: {}", e),
+            ));
+        }
+    };
 
     let server = HttpServer::new(move || {
         App::new()
             .app_data(pool.clone())
+            .app_data(solana_state.clone())
             .wrap(middleware::Logger::default())
             .service(web::scope("/api").configure(configure))
     })

@@ -1,16 +1,18 @@
 //! testr — production-style Actix + SQLx service.
 //!
-//! Provides HTTP API, MySQL persistence, unified error handling and config.
+//! Provides HTTP API, MySQL persistence, Solana RPC integration, unified error handling and config.
 
 pub mod config;
 pub mod domain;
 pub mod error;
 pub mod handlers;
 pub mod routes;
+pub mod solana;
 
 pub use config::Config;
 pub use error::{AppError, AppResult};
 pub use routes::configure;
+pub use solana::{SolanaClient, SolanaClientState};
 
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySqlPool;

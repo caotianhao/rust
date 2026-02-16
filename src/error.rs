@@ -29,6 +29,9 @@ pub enum AppError {
 
     #[error("validation error: {0}")]
     Validation(String),
+
+    #[error("Solana RPC error: {0}")]
+    Solana(String),
 }
 
 pub type AppResult<T> = Result<T, AppError>;
@@ -77,6 +80,16 @@ impl ResponseError for AppError {
                     detail: Some(msg.clone()),
                 },
             ),
+            AppError::Solana(msg) => {
+                tracing::error!("Solana RPC error: {}", msg);
+                (
+                    StatusCode::BAD_GATEWAY,
+                    ErrorBody {
+                        error: "Solana RPC error".into(),
+                        detail: Some(msg.clone()),
+                    },
+                )
+            }
         };
         HttpResponse::build(status).json(body)
     }
