@@ -5,6 +5,7 @@ edition = "2021"
 description = "Production-style Actix + SQLx API service"
 authors = ["testr"]
 license = "MIT"
+default-run = "testr"
 
 [dependencies]
 actix-web = "4.11"

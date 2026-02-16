@@ -1,6 +1,6 @@
 use actix_web::{App, HttpResponse, HttpServer, Responder, web};
 use chrono::Utc;
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use sqlx::mysql::MySqlPoolOptions;
@@ -82,6 +82,12 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
 
     init_db(&pool).await;
+
+    println!("mysql bin: HTTP server listening on http://127.0.0.1:8080");
+    println!("  GET  /users     -> list users");
+    println!("  POST /users     -> create user (JSON: name, age)");
+    println!("  PUT  /users     -> update user (JSON: id, name, age)");
+    println!("  DELETE /users/{{id}} -> delete user");
 
     HttpServer::new(move || {
         App::new()
