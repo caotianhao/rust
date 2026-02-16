@@ -1,62 +1,47 @@
-mod enum_exe;
+//! 主入口：加载配置、初始化日志与 DB、启动 HTTP 服务并支持优雅关闭
 
-fn main() {
-    println!("a {}", add(1, 6));
-    println!("Hello, world!");
+use actix_web::{middleware, web, App, HttpServer};
+use tracing_subscriber::EnvFilter;
 
-    let sum = add(1, 660);
-    println!("aa {}", sum);
+use testr::{configure, create_pool, run_migrations, Config};
 
-    exe1();
-    exe2();
-    exe3();
-    exe4();
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let config = Config::from_env_or_default();
 
-    enum_exe::del();
-}
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&config.log_level)),
+        )
+        .init();
 
-fn add(a: i64, b: i64) -> i64 {
-    a + b
-}
+    tracing::info!("binding on {}", config.bind);
+    let pool = create_pool(&config.database_url)
+        .await
+        .expect("failed to create database pool");
+    run_migrations(&pool).await.expect("migrations failed");
 
-fn exe1() {
-    let a;
-    a = 2;
-    println!("{}", a)
-}
+    let bind = config.bind;
+    let pool = web::Data::new(pool);
 
-fn exe2() {
-    let a = 'a';
-    let b = "eh";
-    let c = (1, 2.3, "aa");
+    let server = HttpServer::new(move || {
+        App::new()
+            .app_data(pool.clone())
+            .wrap(middleware::Logger::default())
+            .service(web::scope("/api").configure(configure))
+    })
+    .bind(bind)?
+    .workers(2);
 
-    let d = [1, 2, 3, 4, 5];
+    let server = server.shutdown_timeout(30);
+    let srv = server.run();
+    let handle = srv.handle();
+    tokio::spawn(async move {
+        let _ = tokio::signal::ctrl_c().await;
+        tracing::info!("shutting down ...");
+        handle.stop(true).await;
+    });
 
-    println!("{}", a);
-    println!("{}", b);
-    println!("{:?}", c);
-    println!("{:?}", d)
-}
-
-fn exe3() {
-    let s1: String = String::from("hello");
-    let s2 = "hello";
-
-    println!("{}", s1 == s2); // true
-
-    let s3 = s1.clone();
-    println!("{}", s3);
-    println!("{}", s1)
-}
-
-fn exe4() {
-    let mut s = enum_exe::Student {
-        name: String::from(""),
-        age: 0,
-    };
-
-    s.age = 22;
-    s.name = String::from("maa");
-
-    println!("{:?}", s);
+    tracing::info!("listening on http://{}", bind);
+    srv.await
 }

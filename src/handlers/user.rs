@@ -1,0 +1,89 @@
+//! 用户 CRUD 处理
+
+use actix_web::{web, HttpResponse, Responder};
+use chrono::Utc;
+use sqlx::MySqlPool;
+
+use crate::domain::{User, UserCreate, UserUpdate};
+use crate::error::{AppError, AppResult};
+
+pub async fn list_users(pool: web::Data<MySqlPool>) -> AppResult<impl Responder> {
+    let users = sqlx::query_as::<_, User>(
+        "SELECT id, name, age, ctime, utime FROM users ORDER BY id",
+    )
+    .fetch_all(pool.get_ref())
+    .await?;
+    Ok(HttpResponse::Ok().json(users))
+}
+
+pub async fn get_user(
+    pool: web::Data<MySqlPool>,
+    id: web::Path<i64>,
+) -> AppResult<impl Responder> {
+    let user = sqlx::query_as::<_, User>("SELECT id, name, age, ctime, utime FROM users WHERE id = ?")
+        .bind(*id)
+        .fetch_optional(pool.get_ref())
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("user id {}", id)))?;
+    Ok(HttpResponse::Ok().json(user))
+}
+
+pub async fn create_user(
+    pool: web::Data<MySqlPool>,
+    body: web::Json<UserCreate>,
+) -> AppResult<impl Responder> {
+    let now = Utc::now().timestamp();
+    let result = sqlx::query(
+        "INSERT INTO users (name, age, ctime, utime) VALUES (?, ?, ?, ?)",
+    )
+    .bind(&body.name)
+    .bind(body.age)
+    .bind(now)
+    .bind(now)
+    .execute(pool.get_ref())
+    .await?;
+    let id = result.last_insert_id() as i64;
+    tracing::info!("created user id={} name={}", id, body.name);
+    Ok(HttpResponse::Created().json(serde_json::json!({ "id": id })))
+}
+
+pub async fn update_user(
+    pool: web::Data<MySqlPool>,
+    id: web::Path<i64>,
+    body: web::Json<UserUpdate>,
+) -> AppResult<impl Responder> {
+    let existing = sqlx::query_as::<_, User>("SELECT id, name, age, ctime, utime FROM users WHERE id = ?")
+        .bind(*id)
+        .fetch_optional(pool.get_ref())
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("user id {}", id)))?;
+
+    let name = body.name.as_deref().unwrap_or(&existing.name);
+    let age = body.age.unwrap_or(existing.age);
+    let now = Utc::now().timestamp();
+
+    sqlx::query("UPDATE users SET name = ?, age = ?, utime = ? WHERE id = ?")
+        .bind(name)
+        .bind(age)
+        .bind(now)
+        .bind(*id)
+        .execute(pool.get_ref())
+        .await?;
+    tracing::info!("updated user id={}", id);
+    Ok(HttpResponse::Ok().json(serde_json::json!({ "updated": true })))
+}
+
+pub async fn delete_user(
+    pool: web::Data<MySqlPool>,
+    id: web::Path<i64>,
+) -> AppResult<impl Responder> {
+    let result = sqlx::query("DELETE FROM users WHERE id = ?")
+        .bind(*id)
+        .execute(pool.get_ref())
+        .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!("user id {}", id)));
+    }
+    tracing::info!("deleted user id={}", id);
+    Ok(HttpResponse::Ok().json(serde_json::json!({ "deleted": true })))
+}
