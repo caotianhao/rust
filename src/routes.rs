@@ -1,11 +1,11 @@
-//! 路由配置
+//! Route configuration.
 
 use actix_web::web;
 use actix_web::Scope;
 
 use crate::handlers::{create_user, delete_user, get_user, health_check, list_users, ready, update_user};
 
-/// 注册所有路由
+/// Register all API routes.
 pub fn configure() -> Scope {
     web::scope("")
         .service(health_check)

@@ -1,4 +1,4 @@
-//! 主入口：加载配置、初始化日志与 DB、启动 HTTP 服务并支持优雅关闭
+//! Main entry: load config, init logging and DB, start HTTP server with graceful shutdown.
 
 use actix_web::{middleware, web, App, HttpServer};
 use tracing_subscriber::EnvFilter;
@@ -16,10 +16,14 @@ async fn main() -> std::io::Result<()> {
         .init();
 
     tracing::info!("binding on {}", config.bind);
-    let pool = create_pool(&config.database_url)
-        .await
-        .expect("failed to create database pool");
-    run_migrations(&pool).await.expect("migrations failed");
+    let pool = create_pool(&config.database_url).await.map_err(|e| {
+        tracing::error!("failed to create database pool: {}", e);
+        std::io::Error::new(std::io::ErrorKind::Other, format!("database pool: {}", e))
+    })?;
+    run_migrations(&pool).await.map_err(|e| {
+        tracing::error!("migrations failed: {}", e);
+        std::io::Error::new(std::io::ErrorKind::Other, format!("migrations: {}", e))
+    })?;
 
     let bind = config.bind;
     let pool = web::Data::new(pool);

@@ -1,9 +1,18 @@
-//! 应用统一错误类型与 HTTP 响应转换
+//! Application-wide error type and HTTP response conversion.
 
 use actix_web::{http::StatusCode, HttpResponse, ResponseError};
+use serde::Serialize;
 use thiserror::Error;
 
-/// 应用级错误，用于 handler 和 service 层
+/// API error payload for JSON responses.
+#[derive(Debug, Serialize)]
+pub struct ErrorBody {
+    pub error: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+}
+
+/// Application-level error for handlers and services.
 #[derive(Error, Debug)]
 pub enum AppError {
     #[error("database error: {0}")]
@@ -17,25 +26,58 @@ pub enum AppError {
 
     #[error("internal error: {0}")]
     Internal(#[from] anyhow::Error),
+
+    #[error("validation error: {0}")]
+    Validation(String),
 }
 
 pub type AppResult<T> = Result<T, AppError>;
 
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
-        let err_msg = self.to_string();
-        let (status, msg) = match self {
+        let (status, body) = match self {
             AppError::Db(e) => {
                 tracing::error!("database error: {}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "database error")
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorBody {
+                        error: "database error".into(),
+                        detail: None,
+                    },
+                )
             }
-            AppError::NotFound(_) => (StatusCode::NOT_FOUND, err_msg.as_str()),
-            AppError::BadRequest(_) => (StatusCode::BAD_REQUEST, err_msg.as_str()),
+            AppError::NotFound(msg) => (
+                StatusCode::NOT_FOUND,
+                ErrorBody {
+                    error: "not found".into(),
+                    detail: Some(msg.clone()),
+                },
+            ),
+            AppError::BadRequest(msg) => (
+                StatusCode::BAD_REQUEST,
+                ErrorBody {
+                    error: "bad request".into(),
+                    detail: Some(msg.clone()),
+                },
+            ),
             AppError::Internal(e) => {
                 tracing::error!("internal error: {}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal error")
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorBody {
+                        error: "internal error".into(),
+                        detail: None,
+                    },
+                )
             }
+            AppError::Validation(msg) => (
+                StatusCode::BAD_REQUEST,
+                ErrorBody {
+                    error: "validation error".into(),
+                    detail: Some(msg.clone()),
+                },
+            ),
         };
-        HttpResponse::build(status).body(msg.to_string())
+        HttpResponse::build(status).json(body)
     }
 }

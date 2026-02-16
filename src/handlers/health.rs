@@ -1,4 +1,4 @@
-//! 健康检查与就绪探针
+//! Health check and readiness probe handlers.
 
 use actix_web::{get, HttpResponse, Responder};
 

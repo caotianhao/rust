@@ -1,6 +1,6 @@
-//! testr — 生产风格 Actix + SQLx 服务
+//! testr — production-style Actix + SQLx service.
 //!
-//! 提供 HTTP API、MySQL 持久化、统一错误与配置。
+//! Provides HTTP API, MySQL persistence, unified error handling and config.
 
 pub mod config;
 pub mod domain;
@@ -15,7 +15,7 @@ pub use routes::configure;
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySqlPool;
 
-/// 创建 MySQL 连接池
+/// Create MySQL connection pool.
 pub async fn create_pool(database_url: &str) -> Result<MySqlPool, sqlx::Error> {
     MySqlPoolOptions::new()
         .max_connections(10)
@@ -23,18 +23,18 @@ pub async fn create_pool(database_url: &str) -> Result<MySqlPool, sqlx::Error> {
         .await
 }
 
-/// 执行表结构初始化（开发/演示用；生产建议用 sqlx migrate）
+/// Run table setup (dev/demo; for production prefer sqlx migrate).
 pub async fn run_migrations(pool: &MySqlPool) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS users (
-            id bigint(20) NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-            name varchar(50) NOT NULL DEFAULT '' COMMENT '用户名称',
-            age int(11) NOT NULL DEFAULT 0 COMMENT '用户年龄',
-            ctime bigint(20) NOT NULL DEFAULT 0 COMMENT '创建时间',
-            utime bigint(20) NOT NULL DEFAULT 0 COMMENT '更新时间',
+            id bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'auto-increment id',
+            name varchar(50) NOT NULL DEFAULT '' COMMENT 'user name',
+            age int(11) NOT NULL DEFAULT 0 COMMENT 'user age',
+            ctime bigint(20) NOT NULL DEFAULT 0 COMMENT 'created at',
+            utime bigint(20) NOT NULL DEFAULT 0 COMMENT 'updated at',
             PRIMARY KEY (id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='users table';
         "#,
     )
     .execute(pool)

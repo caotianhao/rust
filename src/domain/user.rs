@@ -1,9 +1,9 @@
-//! 用户领域模型与 DTO
+//! User domain model and DTOs.
 
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-/// 用户实体（与表一致）
+/// User entity (matches DB table).
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct User {
     pub id: Option<i64>,
@@ -13,14 +13,14 @@ pub struct User {
     pub utime: i64,
 }
 
-/// 创建用户请求体
+/// Request body for creating a user.
 #[derive(Debug, Deserialize)]
 pub struct UserCreate {
     pub name: String,
     pub age: i32,
 }
 
-/// 更新用户请求体
+/// Request body for updating a user.
 #[derive(Debug, Deserialize)]
 pub struct UserUpdate {
     pub name: Option<String>,

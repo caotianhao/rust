@@ -1,4 +1,4 @@
-//! 领域模型
+//! Domain models.
 
 mod user;
 

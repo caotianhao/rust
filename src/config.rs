@@ -1,20 +1,20 @@
-//! 从环境变量加载配置
+//! Load configuration from environment variables.
 
 use std::net::SocketAddr;
 
-/// 应用配置
+/// Application configuration.
 #[derive(Clone, Debug)]
 pub struct Config {
-    /// 数据库连接串
+    /// Database connection URL.
     pub database_url: String,
-    /// HTTP 监听地址
+    /// HTTP bind address.
     pub bind: SocketAddr,
-    /// 日志级别 (RUST_LOG)
+    /// Log level (RUST_LOG).
     pub log_level: String,
 }
 
 impl Config {
-    /// 从环境变量加载；缺少 DATABASE_URL 时返回错误
+    /// Load from environment; returns error if DATABASE_URL is missing.
     pub fn from_env() -> Result<Self, String> {
         dotenvy::dotenv().ok();
         let database_url = std::env::var("DATABASE_URL")
@@ -31,7 +31,7 @@ impl Config {
         })
     }
 
-    /// 带默认值加载，便于本地开发（无 DATABASE_URL 时用默认连接串）
+    /// Load with defaults for local development (uses default DB URL if DATABASE_URL is unset).
     pub fn from_env_or_default() -> Self {
         dotenvy::dotenv().ok();
         let database_url = std::env::var("DATABASE_URL")

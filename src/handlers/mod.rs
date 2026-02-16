@@ -1,4 +1,4 @@
-//! HTTP 请求处理
+//! HTTP request handlers.
 
 mod health;
 mod user;
